@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ContactInquiry {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  company   String?
+  message   String
+  status    String   @default("PENDING") // PENDING, REPLIED
+  createdAt DateTime @default(now())
+}
+
+model AuditRequest {
+  id            String    @id @default(uuid())
+  name          String
+  email         String
+  website       String
+  report        String    // The AI generated report text
+  status        String    @default("PENDING") // PENDING, SCHEDULED, COMPLETED
+  scheduledDate DateTime? // For "scheduled for talk after audit"
+  createdAt     DateTime  @default(now())
+}
+
+model PageContent {
+  id        String   @id @default(uuid())
+  section   String   // e.g., "hero", "services", "about"
+  key       String   @unique // e.g., "hero_title", "hero_subtitle"
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id               String   @id @default(uuid())
+  title            String
+  shortDescription String?
+  description      String
+  imageUrl         String?
+  tags             String?
+  liveLink         String?
+  githubLink       String?
+  sorting          Int      @default(0)
+  serviceId        String?
+  service          Service? @relation(fields: [serviceId], references: [id])
+  status           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  name        String
+  sorting     Int       @default(0)
+  description String
+  tags        String?
+  tasks       String?
+  projects    Project[]
+  status      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SliderContent {
+  id        String   @id @default(uuid())
+  title     String
+  imageUrl  String?
+  sorting   Int      @default(0)
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Admin {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String
+  resetCode         String?
+  resetCodeExpires  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
