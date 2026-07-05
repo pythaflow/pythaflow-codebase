@@ -37,6 +37,7 @@ export default function Navbar() {
     { href: '/services', label: 'Services' },
     { href: '/work', label: 'Work' },
     { href: '/#about', label: 'Studio' },
+    { href: '/blog', label: 'Blog' },
     { href: '/assessment', label: 'Free Audit' },
   ];
 

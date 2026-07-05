@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import StatusRadio from '@/components/admin/StatusRadio';
 
 export default function SettingsAdmin() {
   const [activeTab, setActiveTab] = useState('general');
@@ -22,6 +24,7 @@ export default function SettingsAdmin() {
   const [editingSliderId, setEditingSliderId] = useState(null);
   const [sliderData, setSliderData] = useState({
     title: '',
+    shortDescription: '',
     imageUrl: '',
     sorting: '0',
     status: true
@@ -78,11 +81,11 @@ export default function SettingsAdmin() {
           setSliderData(prev => ({ ...prev, imageUrl: data.url }));
         }
       } else {
-        alert('Upload failed: ' + data.error);
+        toast.error('Upload failed: ' + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert('Upload failed');
+      toast.error('Upload failed');
     } finally {
       setUploadingImage(false);
     }
@@ -101,10 +104,10 @@ export default function SettingsAdmin() {
           body: JSON.stringify({ section: 'settings', key, value: settings[key] })
         });
       }
-      alert('Settings saved successfully!');
+      toast.success('Settings saved successfully!');
     } catch (err) {
       console.error(err);
-      alert('Failed to save settings.');
+      toast.error('Failed to save settings.');
     } finally {
       setSavingSettings(false);
     }
@@ -143,19 +146,22 @@ export default function SettingsAdmin() {
       });
       
       if (res.ok) {
+        toast.success('Slider saved successfully!');
         resetSliderForm();
         fetchSliders();
       } else {
-        alert('Failed to save slider');
+        toast.error('Failed to save slider');
       }
     } catch (err) {
       console.error(err);
+      toast.error('An unexpected error occurred.');
     }
   };
 
   const editSlider = (s) => {
     setSliderData({
       title: s.title || '',
+      shortDescription: s.shortDescription || '',
       imageUrl: s.imageUrl || '',
       sorting: s.sorting?.toString() || '0',
       status: s.status !== undefined ? s.status : true
@@ -165,24 +171,30 @@ export default function SettingsAdmin() {
   };
 
   const deleteSlider = async (id) => {
-    if (!confirm('Delete this slider?')) return;
+    if (!confirm('Are you sure?')) return;
     try {
       const res = await fetch(`/api/sliders/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchSliders();
+      if (res.ok) {
+        toast.success('Slider deleted');
+        fetchSliders();
+      } else {
+        toast.error('Failed to delete');
+      }
     } catch (err) {
       console.error(err);
+      toast.error('An unexpected error occurred.');
     }
   };
 
   const resetSliderForm = () => {
-    setSliderData({ title: '', imageUrl: '', sorting: '0', status: true });
+    setSliderData({ title: '', shortDescription: '', imageUrl: '', sorting: '0', status: true });
     setEditingSliderId(null);
     setSliderView('list');
   };
 
 
   return (
-    <div style={{ maxWidth: '800px' }}>
+    <div style={{ width: '100%', maxWidth: '1000px' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', marginBottom: '2rem' }}>
         Site Settings
       </h1>
@@ -282,6 +294,11 @@ export default function SettingsAdmin() {
                     style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
                 </div>
                 <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Short Description</label>
+                  <textarea name="shortDescription" value={sliderData.shortDescription} onChange={handleSliderChange} rows={3}
+                    style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
+                </div>
+                <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Image Upload</label>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
                     {sliderData.imageUrl && (
@@ -302,9 +319,9 @@ export default function SettingsAdmin() {
                     <input type="number" name="sorting" value={sliderData.sorting} onChange={handleSliderChange} 
                       style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
                   </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
-                    <input type="checkbox" name="status" checked={sliderData.status} onChange={handleSliderChange} id="statusCheck" />
-                    <label htmlFor="statusCheck" style={{ fontSize: '0.875rem' }}>Active Status</label>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.875rem' }}>Active Status</label>
+                    <StatusRadio name="status" value={sliderData.status} onChange={handleSliderChange} />
                   </div>
                 </div>
                 

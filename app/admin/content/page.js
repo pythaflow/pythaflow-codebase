@@ -70,7 +70,7 @@ export default function ContentAdmin() {
   }, {});
 
   return (
-    <div style={{ maxWidth: '800px' }}>
+    <div style={{ width: '100%', maxWidth: '1000px' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', marginBottom: '2rem' }}>
         Manage Page Content
       </h1>

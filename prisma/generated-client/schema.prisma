@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../prisma/generated-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ContactInquiry {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  company   String?
+  message   String
+  status    String   @default("PENDING") // PENDING, REPLIED
+  createdAt DateTime @default(now())
+}
+
+model AuditRequest {
+  id            String    @id @default(uuid())
+  name          String
+  email         String
+  website       String
+  report        String // The AI generated report text
+  status        String    @default("PENDING") // PENDING, SCHEDULED, COMPLETED
+  scheduledDate DateTime? // For "scheduled for talk after audit"
+  createdAt     DateTime  @default(now())
+}
+
+model PageContent {
+  id        String   @id @default(uuid())
+  section   String // e.g., "hero", "services", "about"
+  key       String   @unique // e.g., "hero_title", "hero_subtitle"
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id               String   @id @default(uuid())
+  title            String
+  shortDescription String?
+  description      String
+  imageUrl         String?
+  tags             String?
+  liveLink         String?
+  githubLink       String?
+  sorting          Int      @default(0)
+  serviceId        String?
+  service          Service? @relation(fields: [serviceId], references: [id])
+  status           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  name        String
+  sorting     Int       @default(0)
+  description String
+  tags        String?
+  tasks       String?
+  projects    Project[]
+  status      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SliderContent {
+  id               String   @id @default(uuid())
+  title            String
+  shortDescription String?
+  imageUrl         String?
+  sorting          Int      @default(0)
+  status           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+}
+
+model Admin {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String
+  resetCode        String?
+  resetCodeExpires DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model SiteVisit {
+  id        String   @id @default(uuid())
+  path      String
+  ipHash    String?
+  createdAt DateTime @default(now())
+}
+
+model BlogCategory {
+  id            String            @id @default(uuid())
+  name          String
+  slug          String            @unique
+  subcategories BlogSubCategory[]
+  blogs         Blog[]
+  status        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model BlogSubCategory {
+  id         String       @id @default(uuid())
+  name       String
+  slug       String       @unique
+  categoryId String
+  category   BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  blogs      Blog[]
+  status     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Blog {
+  id              String             @id @default(uuid())
+  title           String
+  slug            String             @unique
+  mainImage       String?
+  categoryId      String
+  category        BlogCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategoryId   String?
+  subcategory     BlogSubCategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  metaTitle       String?
+  metaDescription String?
+  keywords        String? // Comma-separated or JSON string for tags
+  status          Boolean            @default(true)
+  contentBlocks   BlogContentBlock[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model BlogContentBlock {
+  id          String   @id @default(uuid())
+  blogId      String
+  blog        Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  subTitle    String? // Heading of that content block
+  images      String? // JSON string or comma-separated for multiple images
+  layoutStyle String   @default("grid") // grid, carousel, stacked, side-by-side
+  content     String? // Text editor content (HTML)
+  sorting     Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

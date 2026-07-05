@@ -1,5 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
+import StatusRadio from '@/components/admin/StatusRadio';
+import TagInput from '@/components/admin/TagInput';
+import FileUpload from '@/components/admin/FileUpload';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 export default function ProjectsAdmin() {
   const [projects, setProjects] = useState([]);
@@ -53,8 +60,13 @@ export default function ProjectsAdmin() {
   };
 
   const handleChange = (e) => {
+    // Handling tag string changes natively for inputs not using TagInput (though TagInput will manage its own)
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData(prev => ({ ...prev, [e.target.name]: value }));
+  };
+
+  const handleTagsChange = (newTags) => {
+    setFormData(prev => ({ ...prev, tags: newTags }));
   };
 
   const handleSubmit = async (e) => {
@@ -120,7 +132,7 @@ export default function ProjectsAdmin() {
 
   if (view === 'form') {
     return (
-      <div style={{ maxWidth: '800px' }}>
+      <div style={{ width: '100%', maxWidth: '1000px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem' }}>
             {editingId ? 'Edit Project' : 'Add New Project'}
@@ -148,10 +160,6 @@ export default function ProjectsAdmin() {
                 <input type="number" name="sorting" value={formData.sorting} onChange={handleChange} 
                   style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
               </div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
-                <input type="checkbox" name="status" checked={formData.status} onChange={handleChange} id="projectStatus" />
-                <label htmlFor="projectStatus" style={{ fontSize: '0.875rem' }}>Active Status</label>
-              </div>
             </div>
 
             <div>
@@ -166,18 +174,37 @@ export default function ProjectsAdmin() {
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Full Description *</label>
-              <textarea required name="description" value={formData.description} onChange={handleChange} rows={4}
-                style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
+              <div style={{ background: '#fff', color: '#000' }}>
+                <ReactQuill 
+                  theme="snow" 
+                  value={formData.description} 
+                  onChange={(val) => setFormData({ ...formData, description: val })}
+                  style={{ height: '300px', marginBottom: '40px' }}
+                />
+              </div>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Image URL</label>
-              <input name="imageUrl" value={formData.imageUrl} onChange={handleChange} 
-                style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Image Upload</label>
+              <FileUpload 
+                onUpload={(url) => setFormData({ ...formData, imageUrl: url })} 
+                buttonText={formData.imageUrl ? 'Replace Image' : 'Upload Image'} 
+              />
+              {formData.imageUrl && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <img src={formData.imageUrl} alt="Preview" style={{ height: 80, borderRadius: 4, objectFit: 'cover' }} />
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.25rem' }}>{formData.imageUrl}</div>
+                </div>
+              )}
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Tags (comma separated)</label>
-              <input name="tags" value={formData.tags} onChange={handleChange} 
-                style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Tags (Keywords)</label>
+                <TagInput tags={formData.tags} onChange={handleTagsChange} placeholder="Enter tag and press enter" />
+              </div>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem' }}>Active Status</label>
+                <StatusRadio name="status" value={formData.status} onChange={handleChange} />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
@@ -204,7 +231,7 @@ export default function ProjectsAdmin() {
   }
 
   return (
-    <div style={{ maxWidth: '800px' }}>
+    <div style={{ width: '100%', maxWidth: '1000px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem' }}>
           Manage Projects

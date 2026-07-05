@@ -88,7 +88,7 @@ export default function ProfileAdmin() {
   };
 
   return (
-    <div style={{ maxWidth: '600px' }}>
+    <div style={{ width: '100%', maxWidth: '800px' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', marginBottom: '2rem' }}>
         Admin Profile
       </h1>

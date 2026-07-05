@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import StatusRadio from '@/components/admin/StatusRadio';
+import TagInput from '@/components/admin/TagInput';
 
 export default function ServicesAdmin() {
   const [services, setServices] = useState([]);
@@ -39,6 +41,10 @@ export default function ServicesAdmin() {
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData(prev => ({ ...prev, [e.target.name]: value }));
+  };
+
+  const handleTagsChange = (newTags) => {
+    setFormData(prev => ({ ...prev, tags: newTags }));
   };
 
   const handleSubmit = async (e) => {
@@ -100,7 +106,7 @@ export default function ServicesAdmin() {
 
   if (view === 'form') {
     return (
-      <div style={{ maxWidth: '800px' }}>
+      <div style={{ width: '100%', maxWidth: '1000px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem' }}>
             {editingId ? 'Edit Service' : 'Add New Service'}
@@ -123,9 +129,9 @@ export default function ServicesAdmin() {
                 <input type="number" name="sorting" value={formData.sorting} onChange={handleChange} 
                   style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
               </div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
-                <input type="checkbox" name="status" checked={formData.status} onChange={handleChange} id="serviceStatus" />
-                <label htmlFor="serviceStatus" style={{ fontSize: '0.875rem' }}>Active Status</label>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem' }}>Active Status</label>
+                <StatusRadio name="status" value={formData.status} onChange={handleChange} />
               </div>
             </div>
             <div>
@@ -134,9 +140,8 @@ export default function ServicesAdmin() {
                 style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Tags (comma separated)</label>
-              <input name="tags" value={formData.tags} onChange={handleChange} placeholder="e.g. SEO, SEM, Ads"
-                style={{ width: '100%', padding: '0.75rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)' }} />
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Tags (Keywords)</label>
+              <TagInput tags={formData.tags} onChange={handleTagsChange} placeholder="Enter tag and press enter" />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Tasks / What you get (comma separated)</label>
@@ -156,7 +161,7 @@ export default function ServicesAdmin() {
   }
 
   return (
-    <div style={{ maxWidth: '800px' }}>
+    <div style={{ width: '100%', maxWidth: '1000px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem' }}>
           Manage Services
