@@ -53,10 +53,13 @@ export async function generateMetadata() {
   };
 }
 
+import Tracker from '@/components/Tracker';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <Tracker />
         <Cursor />
         <Navbar />
         <main>{children}</main>

@@ -15,23 +15,25 @@ function useReveal() {
   }, []);
 }
 
-const FILTERS = ['All', 'Branding', 'Digital Marketing', 'Motion & Video', 'Web Development', 'Social Media'];
-
-// Placeholder projects — replace with real work
-const PROJECTS = [
-  { id: 1, title: 'Brand Identity System', cat: 'Branding', desc: 'Complete visual identity for a lifestyle brand — logo, colour system, typography, brand guidelines.', bg: 'linear-gradient(135deg,#1a0f0a,#2a1208,#1a0a0a)', tags: ['Logo', 'Brand System', 'Guidelines'] },
-  { id: 2, title: 'Social Campaign', cat: 'Digital Marketing', desc: 'Multi-channel paid campaign that drove 340% ROAS in 60 days for an e-commerce client.', bg: 'linear-gradient(135deg,#0a0f1a,#080d1a,#0a0810)', tags: ['Meta Ads', 'Google Ads', 'Strategy'] },
-  { id: 3, title: 'Brand Film', cat: 'Motion & Video', desc: '90-second brand hero film. Shot, directed and post-produced in-house.', bg: 'linear-gradient(135deg,#0a1a0f,#091508,#0a1a0a)', tags: ['Motion', 'Direction', 'Edit'] },
-  { id: 4, title: 'E-commerce Website', cat: 'Web Development', desc: 'Custom Next.js store — sub-2s load time, mobile-first, 89 Lighthouse score.', bg: 'linear-gradient(135deg,#12000a,#1a0010,#0d0008)', tags: ['Next.js', 'E-commerce', 'UI/UX'] },
-  { id: 5, title: 'SMM Retainer', cat: 'Social Media', desc: 'Full social management across Instagram, LinkedIn and Facebook. 4× engagement growth in 3 months.', bg: 'linear-gradient(135deg,#0a0a1a,#0a0a18,#080810)', tags: ['Instagram', 'LinkedIn', 'Content'] },
-  { id: 6, title: 'Motion Design Pack', cat: 'Motion & Video', desc: '24-piece animated content pack for a SaaS product launch — ads, story frames, reels.', bg: 'linear-gradient(135deg,#1a1000,#1a1200,#140e00)', tags: ['Motion', 'Animation', 'Reels'] },
-];
-
 export default function WorkPage() {
-  const [active, setActive] = useState('All');
   useReveal();
+  const [active, setActive] = useState('All');
+  const [projects, setProjects] = useState([]);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = active === 'All' ? PROJECTS : PROJECTS.filter(p => p.cat === active);
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/projects').then(r => r.json()),
+      fetch('/api/services').then(r => r.json())
+    ]).then(([projData, servData]) => {
+      setProjects(projData.filter(p => p.status));
+      setServices(servData.filter(s => s.status));
+      setLoading(false);
+    }).catch(console.error);
+  }, []);
+
+  const filtered = active === 'All' ? projects : projects.filter(p => p.serviceId === active);
 
   return (
     <>
@@ -65,18 +67,30 @@ export default function WorkPage() {
         padding: '0 3rem',
         display: 'flex', gap: 0, overflowX: 'auto',
       }}>
-        {FILTERS.map(f => (
-          <button key={f} onClick={() => setActive(f)} style={{
+        <button onClick={() => setActive('All')} style={{
+          background: 'none', border: 'none',
+          fontFamily: 'var(--font-mono)', fontSize: '0.68rem',
+          color: active === 'All' ? 'var(--accent)' : 'var(--muted)',
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+          padding: '1.2rem 1.5rem',
+          borderBottom: `2px solid ${active === 'All' ? 'var(--accent)' : 'transparent'}`,
+          transition: 'color .2s, border-color .2s',
+          whiteSpace: 'nowrap', cursor: 'pointer'
+        }}>
+          All
+        </button>
+        {services.map(s => (
+          <button key={s.id} onClick={() => setActive(s.id)} style={{
             background: 'none', border: 'none',
             fontFamily: 'var(--font-mono)', fontSize: '0.68rem',
-            color: active === f ? 'var(--accent)' : 'var(--muted)',
+            color: active === s.id ? 'var(--accent)' : 'var(--muted)',
             letterSpacing: '0.12em', textTransform: 'uppercase',
             padding: '1.2rem 1.5rem',
-            borderBottom: `2px solid ${active === f ? 'var(--accent)' : 'transparent'}`,
+            borderBottom: `2px solid ${active === s.id ? 'var(--accent)' : 'transparent'}`,
             transition: 'color .2s, border-color .2s',
-            whiteSpace: 'nowrap',
+            whiteSpace: 'nowrap', cursor: 'pointer'
           }}>
-            {f}
+            {s.name}
           </button>
         ))}
         <style>{`@media(max-width:768px){.filter-bar{padding:0 1.5rem !important;}}`}</style>
@@ -98,42 +112,48 @@ export default function WorkPage() {
               onMouseEnter={e => { e.currentTarget.querySelector('.pb').style.transform = 'scale(1.04)'; e.currentTarget.querySelector('.po').style.opacity = 1; }}
               onMouseLeave={e => { e.currentTarget.querySelector('.pb').style.transform = 'scale(1)'; e.currentTarget.querySelector('.po').style.opacity = 0; }}
             >
-              <div className="pb" style={{
-                width: '100%', aspectRatio: i === 0 ? '21/9' : '4/3',
-                background: p.bg, transition: 'transform .6s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <div style={{
-                  fontFamily: 'var(--font-display)', fontSize: '0.8rem',
-                  letterSpacing: '0.3em', color: 'rgba(240,235,224,0.15)',
-                  textTransform: 'uppercase',
-                }}>Add project image</div>
-              </div>
+              <Link href={`/work/${p.id}`} style={{ display: 'block', textDecoration: 'none' }}>
+                <div className="pb" style={{
+                  width: '100%', aspectRatio: i === 0 ? '21/9' : '16/9',
+                  background: p.imageUrl ? `url(${p.imageUrl}) center/cover no-repeat` : 'var(--bg3)', 
+                  transition: 'transform .5s ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                   {!p.imageUrl && <span style={{ color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>No Image</span>}
+                </div>
+                <div className="po" style={{
+                  position: 'absolute', inset: 0,
+                  background: 'rgba(8,8,8,0.7)', backdropFilter: 'blur(4px)',
+                  opacity: 0, transition: 'opacity .3s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: 60, height: 60, borderRadius: '50%',
+                    background: 'var(--accent)', color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--font-mono)', fontSize: '0.62rem', letterSpacing: '0.15em',
+                  }}>View</div>
+                </div>
+              </Link>
               <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(to top,rgba(8,8,8,.95) 0%,rgba(8,8,8,.3) 60%,transparent 100%)',
-                padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                background: 'linear-gradient(to top, rgba(8,8,8,0.95) 0%, transparent 100%)',
+                padding: '3rem 2rem 2rem', pointerEvents: 'none'
               }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: 'var(--accent)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>{p.cat}</div>
-                <div style={{ fontSize: i === 0 ? '1.6rem' : '1.15rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{p.title}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '1rem', maxWidth: 480 }}>{p.desc}</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {p.tags.map(t => (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--accent)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  {p.service?.name || 'Project'}
+                </div>
+                <div style={{ fontSize: i === 0 ? '1.8rem' : '1.3rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.6rem' }}>{p.title}</div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, maxWidth: i === 0 ? '60%' : '100%' }}>{p.shortDescription}</p>
+                <div style={{ display: 'flex', gap: 6, marginTop: '1rem', flexWrap: 'wrap' }}>
+                  {(p.tags ? p.tags.split(',') : []).map(t => (
                     <span key={t} style={{
-                      fontFamily: 'var(--font-mono)', fontSize: '0.58rem',
-                      color: 'var(--muted)', border: '1px solid var(--border)',
-                      padding: '2px 8px', borderRadius: 1, letterSpacing: '0.1em',
-                    }}>{t}</span>
+                      fontFamily: 'var(--font-mono)', fontSize: '0.58rem', color: 'rgba(255,255,255,0.6)',
+                      border: '1px solid rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: 2, letterSpacing: '0.1em',
+                    }}>{t.trim()}</span>
                   ))}
                 </div>
               </div>
-              <div className="po" style={{
-                position: 'absolute', top: '1rem', right: '1rem',
-                fontFamily: 'var(--font-mono)', fontSize: '0.62rem',
-                color: '#fff', background: 'var(--accent)',
-                padding: '4px 10px', letterSpacing: '0.1em', textTransform: 'uppercase',
-                opacity: 0, transition: 'opacity .2s',
-              }}>Coming Soon</div>
             </div>
           ))}
         </div>

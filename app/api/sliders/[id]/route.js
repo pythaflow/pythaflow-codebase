@@ -18,12 +18,13 @@ export async function PUT(req, { params }) {
   try {
     const { id } = params;
     const body = await req.json();
-    const { title, imageUrl, sorting, status } = body;
+    const { title, shortDescription, imageUrl, sorting, status } = body;
     
     const slider = await prisma.sliderContent.update({
       where: { id },
       data: {
         title,
+        shortDescription,
         imageUrl,
         sorting: parseInt(sorting) || 0,
         status: status === undefined ? true : Boolean(status)

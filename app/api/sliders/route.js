@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { title, imageUrl, sorting, status } = body;
+    const { title, shortDescription, imageUrl, sorting, status } = body;
     
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -25,6 +25,7 @@ export async function POST(req) {
     const slider = await prisma.sliderContent.create({
       data: {
         title,
+        shortDescription,
         imageUrl,
         sorting: parseInt(sorting) || 0,
         status: status === undefined ? true : Boolean(status)

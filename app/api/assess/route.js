@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import * as cheerio from 'cheerio';
 
 export async function POST(req) {
   try {
@@ -34,6 +35,31 @@ export async function POST(req) {
       return NextResponse.json(mockResult);
     }
 
+    // Scrape website if provided
+    let scrapedTitle = '';
+    let scrapedDesc = '';
+    let scrapedText = '';
+
+    if (website && website.startsWith('http')) {
+      try {
+        const scrapeRes = await fetch(website, { 
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+          signal: AbortSignal.timeout(4000)
+        });
+        if (scrapeRes.ok) {
+          const html = await scrapeRes.text();
+          const $ = cheerio.load(html);
+          scrapedTitle = $('title').text().trim();
+          scrapedDesc = $('meta[name="description"]').attr('content') || '';
+          
+          $('script, style, noscript, iframe').remove();
+          scrapedText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 2500);
+        }
+      } catch (err) {
+        console.warn('Failed to scrape website:', err.message);
+      }
+    }
+
     // Prepare prompt for AI
     const prompt = `
 You are an expert digital marketing auditor for a premium creative agency.
@@ -46,6 +72,8 @@ LinkedIn: ${linkedin}
 Other Links: ${other}
 Monthly Budget: ${budget}
 Biggest Struggle: ${struggle}
+
+${scrapedTitle ? `--- START OF SCRAPED WEBSITE DATA ---\nTitle: ${scrapedTitle}\nMeta Description: ${scrapedDesc}\nHomepage Content Extract:\n${scrapedText}\n--- END OF SCRAPED DATA ---\n\n(Use the scraped website data above to write highly accurate, specific, and realistic notes about their actual website structure, SEO, and content.)` : ''}
 
 Analyze this specific data deeply. Generate a highly personalized, realistic, professional, and slightly critical audit report.
 Return your response in STRICT JSON format. Do not use markdown blocks, just raw JSON.

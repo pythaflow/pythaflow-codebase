@@ -68,24 +68,41 @@ const PROCESS_STEPS = [
   { n: '05', name: 'Scale', desc: 'We analyse, iterate and double down on what works. Growth is not a moment — it is a system.' },
 ];
 
-const HERO_SLIDES = [
-  { p1: 'We Make', p2: 'Brands', p3: 'Move.', img: '/slider1.png' },
-  { p1: 'We Build', p2: 'Digital', p3: 'Empires.', img: '/slider2.png' },
-  { p1: 'We Craft', p2: 'Premium', p3: 'Spaces.', img: '/slider3.png' }
-];
-
 export default function HomePage() {
   useReveal();
   const [slideIdx, setSlideIdx] = useState(0);
+  const [sliders, setSliders] = useState([]);
+  const [blogs, setBlogs] = useState([]);
+  const [servicesData, setServicesData] = useState([]);
+  const [projectsData, setProjectsData] = useState([]);
 
   useEffect(() => {
+    fetch('/api/sliders').then(r => r.json()).then(data => {
+      setSliders(data.filter(s => s.status));
+    }).catch(console.error);
+
+    fetch('/api/blogs').then(r => r.json()).then(data => {
+      setBlogs(data.filter(b => b.status).slice(0, 3)); // Latest 3 blogs
+    }).catch(console.error);
+
+    fetch('/api/services').then(r => r.json()).then(data => {
+      setServicesData(data.filter(s => s.status));
+    }).catch(console.error);
+
+    fetch('/api/projects').then(r => r.json()).then(data => {
+      setProjectsData(data.filter(p => p.status).slice(0, 4)); // Latest 4 projects for preview
+    }).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (sliders.length === 0) return;
     const interval = setInterval(() => {
-      setSlideIdx(prev => (prev + 1) % HERO_SLIDES.length);
+      setSlideIdx(prev => (prev + 1) % sliders.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, [slideIdx]);
+  }, [slideIdx, sliders]);
 
-  const slide = HERO_SLIDES[slideIdx];
+  const slide = sliders.length > 0 ? sliders[slideIdx] : null;
 
   return (
     <>
@@ -116,18 +133,34 @@ export default function HomePage() {
         <div className="hero-grid" style={{
           display: 'grid', flexGrow: 1, alignItems: 'center', zIndex: 2, position: 'relative', gap: '2rem'
         }}>
-          {/* Left Side: Floating Slide Image */}
-          <div style={{ position: 'relative', width: '100%', height: '400px' }}>
-            {HERO_SLIDES.map((s, i) => (
-              <img key={i} src={s.img} alt="floating shape" style={{
-                width: '100%', height: '100%', objectFit: 'contain',
-                position: 'absolute', inset: 0,
-                opacity: slideIdx === i ? 0.85 : 0,
-                transition: 'opacity 1s ease',
-                mixBlendMode: 'plus-lighter', pointerEvents: 'none',
-                animation: 'floating 4s ease-in-out infinite'
-              }} />
-            ))}
+          {/* Left Side: Floating Slide Image and Short Description */}
+          <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ position: 'relative', width: '100%', height: '400px' }}>
+              {sliders.map((s, i) => (
+                <img key={s.id} src={s.imageUrl} alt="floating shape" style={{
+                  width: '100%', height: '100%', objectFit: 'contain',
+                  position: 'absolute', inset: 0,
+                  opacity: slideIdx === i ? 1 : 0,
+                  transition: 'opacity 1s ease',
+                  mixBlendMode: 'plus-lighter', pointerEvents: 'none',
+                  animation: 'floating 4s ease-in-out infinite'
+                }} />
+              ))}
+            </div>
+
+            {/* Dynamic Short Description matching the active slide */}
+            <div style={{ minHeight: '80px', position: 'relative' }}>
+              {sliders.map((s, i) => (
+                <p key={s.id} style={{
+                  fontSize: '1.05rem', color: 'var(--muted)', lineHeight: 1.65, maxWidth: 450,
+                  position: 'absolute', top: 0, left: 0, width: '100%',
+                  opacity: slideIdx === i ? 1 : 0,
+                  transition: 'opacity 0.8s ease', pointerEvents: slideIdx === i ? 'auto' : 'none'
+                }}>
+                  {s.shortDescription}
+                </p>
+              ))}
+            </div>
           </div>
 
           {/* Right Side: Text & Controls */}
@@ -147,36 +180,47 @@ export default function HomePage() {
               fontSize: 'clamp(4rem, 8vw, 8rem)',
               lineHeight: 0.9, letterSpacing: '0.03em', color: 'var(--text)',
               animation: 'fadeUp .9s .5s both', position: 'relative',
-              minHeight: '280px'
+              minHeight: '280px',
+              wordWrap: 'break-word', textTransform: 'uppercase'
             }}>
-              <span style={{ display: 'block', opacity: 1, transition: 'opacity 0.5s' }}>{slide.p1}</span>
-              <span style={{ display: 'block', opacity: 1, transition: 'opacity 0.5s' }}>{slide.p2}</span>
-              <span style={{ color: 'var(--accent)', display: 'block', opacity: 1, transition: 'opacity 0.5s' }}>{slide.p3}</span>
+              {sliders.map((s, i) => (
+                <span key={s.id} style={{
+                  display: slideIdx === i ? 'block' : 'none',
+                  animation: slideIdx === i ? 'fadeUp 0.8s both' : 'none',
+                  color: (i % 2 !== 0) ? 'var(--accent)' : 'var(--text)' // Alternate color for flair if needed, or stick to provided title
+                }}>
+                  {/* Since Title might be one long string, we just display it. */}
+                  {/* To match the 'WE MAKE BRANDS MOVE.', we can split words if needed, but direct render works too */}
+                  <span dangerouslySetInnerHTML={{ __html: s.title.replace(/\./g, '<span style="color:var(--accent)">.</span>').replace(/\n/g, '<br/>') }} />
+                </span>
+              ))}
             </h1>
 
             {/* Slider Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '2rem', animation: 'fadeUp 1s .7s both' }}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => setSlideIdx((slideIdx - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} style={{
-                  background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)',
-                  width: 40, height: 40, borderRadius: '50%', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.3s'
-                }} aria-label="Previous Slide">←</button>
-                <button onClick={() => setSlideIdx((slideIdx + 1) % HERO_SLIDES.length)} style={{
-                  background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)',
-                  width: 40, height: 40, borderRadius: '50%', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.3s'
-                }} aria-label="Next Slide">→</button>
+            {sliders.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '2rem', animation: 'fadeUp 1s .7s both' }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => setSlideIdx((slideIdx - 1 + sliders.length) % sliders.length)} style={{
+                    background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)',
+                    width: 40, height: 40, borderRadius: '50%', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.3s'
+                  }} aria-label="Previous Slide">←</button>
+                  <button onClick={() => setSlideIdx((slideIdx + 1) % sliders.length)} style={{
+                    background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)',
+                    width: 40, height: 40, borderRadius: '50%', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.3s'
+                  }} aria-label="Next Slide">→</button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {sliders.map((_, i) => (
+                    <button key={i} onClick={() => setSlideIdx(i)} style={{
+                      width: 30, height: 2, background: slideIdx === i ? 'var(--accent)' : 'var(--border)',
+                      border: 'none', cursor: 'pointer', transition: 'background 0.3s'
+                    }} aria-label={`Go to slide ${i + 1}`} />
+                  ))}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {HERO_SLIDES.map((_, i) => (
-                  <button key={i} onClick={() => setSlideIdx(i)} style={{
-                    width: 30, height: 2, background: slideIdx === i ? 'var(--accent)' : 'var(--border)',
-                    border: 'none', cursor: 'pointer', transition: 'background 0.3s'
-                  }} aria-label={`Go to slide ${i + 1}`} />
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -186,10 +230,7 @@ export default function HomePage() {
           animation: 'fadeUp .9s .8s both', zIndex: 2,
           flexWrap: 'wrap', gap: '2rem',
         }}>
-          <p style={{ fontSize: '1.05rem', color: 'var(--muted)', lineHeight: 1.65, maxWidth: 400 }}>
-            <strong style={{ color: 'var(--text)' }}>Design. Marketing. Motion.</strong> — Pythaflow is a full-service creative agency built for brands that refuse to be forgettable.
-          </p>
-          <div style={{ display: 'flex', gap: '3rem' }}>
+          <div style={{ display: 'flex', gap: '3rem', width: '100%', justifyContent: 'flex-end' }}>
             {[['360°', 'Digital Solutions'], ['2', 'Continents'], ['∞', 'Global Reach']].map(([num, label]) => (
               <div key={label} style={{ textAlign: 'right' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.8rem', letterSpacing: '0.05em', lineHeight: 1 }}>{num}</div>
@@ -253,26 +294,25 @@ export default function HomePage() {
           gap: 1, background: 'var(--border)',
           border: '1px solid var(--border)',
         }} className="reveal services-grid">
-          {SERVICES.map((s) => (
-            <div key={s.num}
+          {servicesData.map((s, i) => (
+            <div key={s.id}
               style={{ background: 'var(--bg2)', padding: '2.5rem 2rem', position: 'relative', overflow: 'hidden', transition: 'background .3s' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.querySelector('.sbar').style.width = '100%'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg2)'; e.currentTarget.querySelector('.sbar').style.width = '0'; }}
             >
               <div className="sbar" style={{ position: 'absolute', bottom: 0, left: 0, height: 2, width: 0, background: 'var(--accent)', transition: 'width .4s ease' }} />
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--accent)', letterSpacing: '0.15em', marginBottom: '1.5rem' }}>{s.num}</div>
-              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '1rem', filter: 'grayscale(1) contrast(0.5)', transition: 'filter .3s' }}
-                onMouseEnter={e => e.currentTarget.style.filter = 'none'}
-              >{s.icon}</span>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--accent)', letterSpacing: '0.15em', marginBottom: '1.5rem' }}>
+                {(i + 1).toString().padStart(2, '0')}
+              </div>
               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.8rem', letterSpacing: '0.02em' }}>{s.name}</div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.7 }}>{s.desc}</p>
+              <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.7 }}>{s.description}</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: '1.2rem' }}>
-                {s.tags.map(t => (
+                {(s.tags ? s.tags.split(',') : []).map(t => (
                   <span key={t} style={{
                     fontFamily: 'var(--font-mono)', fontSize: '0.62rem',
                     color: 'var(--muted)', border: '1px solid var(--border)',
                     padding: '3px 8px', borderRadius: 1, letterSpacing: '0.08em',
-                  }}>{t}</span>
+                  }}>{t.trim()}</span>
                 ))}
               </div>
             </div>
@@ -382,43 +422,46 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '1.5rem' }} className="reveal work-preview-grid">
-          {[
-            { cat: 'Branding + Motion', title: 'Featured Campaign', bg: 'linear-gradient(135deg,#1a0f0a 0%,#2a1208 50%,#1a0a0a 100%)', span: 2 },
-            { cat: 'Digital Marketing', title: 'Social Campaign', bg: 'linear-gradient(135deg,#0a0f1a 0%,#080d1a 50%,#0a0810 100%)', span: 1 },
-            { cat: 'Motion Design', title: 'Brand Film', bg: 'linear-gradient(135deg,#0a1a0f 0%,#091508 50%,#0a1a0a 100%)', span: 1 },
-          ].map((item, i) => (
-            <div key={i}
-              style={{ gridColumn: `span ${item.span}`, position: 'relative', overflow: 'hidden', border: '1px solid var(--border)' }}
-              onMouseEnter={e => { e.currentTarget.querySelector('.wbg').style.transform = 'scale(1.04)'; e.currentTarget.querySelector('.wov').style.transform = 'translateY(0)'; }}
-              onMouseLeave={e => { e.currentTarget.querySelector('.wbg').style.transform = 'scale(1)'; e.currentTarget.querySelector('.wov').style.transform = 'translateY(4px)'; }}
-            >
-              <div className="wbg" style={{
-                width: '100%', aspectRatio: item.span === 2 ? '21/9' : '16/9',
-                background: item.bg, transition: 'transform .5s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', letterSpacing: '0.3em', color: 'var(--muted)', textTransform: 'uppercase' }}>
-                  Add your project
-                </span>
-              </div>
-              <div className="wov" style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(to top,rgba(8,8,8,.9) 0%,transparent 60%)',
-                padding: '2rem', display: 'flex', flexDirection: 'column',
-                justifyContent: 'flex-end', transform: 'translateY(4px)', transition: 'transform .3s',
-              }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--accent)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 4 }}>{item.cat}</div>
-                <div style={{ fontSize: item.span === 2 ? '1.5rem' : '1.1rem', fontWeight: 700, color: 'var(--text)' }}>{item.title} — Coming Soon</div>
-              </div>
-              <div style={{
-                position: 'absolute', top: '1rem', right: '1rem',
-                fontFamily: 'var(--font-mono)', fontSize: '0.58rem',
-                color: 'var(--muted)', background: 'var(--bg)',
-                border: '1px solid var(--border)', padding: '3px 8px',
-                letterSpacing: '0.12em', textTransform: 'uppercase',
-              }}>Your work here</div>
-            </div>
-          ))}
+          {projectsData.length > 0 ? projectsData.map((project, i) => {
+            const span = i === 0 ? 2 : 1;
+            return (
+              <Link key={project.id} href={`/work/${project.id}`} style={{ display: 'block', textDecoration: 'none', gridColumn: `span ${span}` }}>
+                <div 
+                  style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--border)', height: '100%' }}
+                  onMouseEnter={e => { e.currentTarget.querySelector('.wbg').style.transform = 'scale(1.04)'; e.currentTarget.querySelector('.wov').style.transform = 'translateY(0)'; }}
+                  onMouseLeave={e => { e.currentTarget.querySelector('.wbg').style.transform = 'scale(1)'; e.currentTarget.querySelector('.wov').style.transform = 'translateY(4px)'; }}
+                >
+                  <div className="wbg" style={{
+                    width: '100%', aspectRatio: span === 2 ? '21/9' : '16/9',
+                    background: project.imageUrl ? `url(${project.imageUrl}) center/cover no-repeat` : 'var(--bg3)', 
+                    transition: 'transform .5s ease',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {!project.imageUrl && (
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', letterSpacing: '0.3em', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                        No Image
+                      </span>
+                    )}
+                  </div>
+                  <div className="wov" style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(to top,rgba(8,8,8,.9) 0%,transparent 60%)',
+                    padding: '2rem', display: 'flex', flexDirection: 'column',
+                    justifyContent: 'flex-end', transform: 'translateY(4px)', transition: 'transform .3s',
+                  }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--accent)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 4 }}>
+                      {project.service?.name || 'Project'}
+                    </div>
+                    <div style={{ fontSize: span === 2 ? '1.5rem' : '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
+                      {project.title}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            )
+          }) : (
+            <p style={{ color: 'var(--muted)', gridColumn: 'span 2', textAlign: 'center', padding: '2rem' }}>Projects coming soon...</p>
+          )}
         </div>
         <style>{`
           .work-preview-grid { grid-template-columns: repeat(2,1fr) !important; }
@@ -476,6 +519,77 @@ export default function HomePage() {
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--muted)', letterSpacing: '0.1em', marginTop: '1rem' }}>
             FREE · NO CREDIT CARD · TAKES 30 SECONDS
           </p>
+        </div>
+      </section>
+
+      {/* ── RECENT BLOGS ───────────────────────────────── */}
+      <section style={{ padding: '7rem 3rem', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '3.5rem', flexWrap: 'wrap', gap: '1rem' }} className="reveal">
+          <div>
+            <div className="section-tag">Insights & News</div>
+            <h2 className="section-title">Latest <span>Articles</span></h2>
+          </div>
+          <Link href="/blog" style={{
+            fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent)',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            borderBottom: '1px solid var(--accent)', paddingBottom: 2,
+            display: 'flex', alignItems: 'center', gap: 8,
+            transition: 'gap .2s',
+          }}>View All Articles →</Link>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }} className="reveal">
+          {blogs.length > 0 ? (
+            blogs.map(blog => (
+              <Link key={blog.id} href={`/blog/${blog.slug}`} style={{ display: 'block', textDecoration: 'none', height: '100%' }}>
+                <div style={{
+                  border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden',
+                  background: 'var(--bg2)', transition: 'transform 0.3s ease, border-color 0.3s',
+                  height: '100%', display: 'flex', flexDirection: 'column'
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
+                  {blog.mainImage && (
+                    <img src={blog.mainImage} alt={blog.title} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+                  )}
+                  <div style={{ padding: '1.5rem', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        {blog.category?.name || 'General'}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                        {new Date(blog.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: '1.25rem', color: 'var(--text)', marginBottom: '0.5rem', lineHeight: 1.3 }}>{blog.title}</h3>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: '1.5rem' }}>
+                      {blog.metaDescription || 'Read more about this topic in our latest article.'}
+                    </p>
+                    <div style={{ marginTop: 'auto', fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)' }}>Read Article →</div>
+                  </div>
+                </div>
+              </Link>
+            ))
+          ) : (
+            [1, 2, 3].map(i => (
+              <div key={i} style={{
+                border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden',
+                background: 'var(--bg2)', opacity: 0.6, height: '100%', display: 'flex', flexDirection: 'column'
+              }}>
+                <div style={{ width: '100%', height: '200px', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Placeholder Image</span>
+                </div>
+                <div style={{ padding: '1.5rem', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Category</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>00/00/0000</span>
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', color: 'var(--text)', marginBottom: '0.5rem', lineHeight: 1.3 }}>Example Blog Post Title Here</h3>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '1.5rem' }}>This is a placeholder for a blog post. Add some articles from the admin panel!</p>
+                  <div style={{ marginTop: 'auto', fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)' }}>Read Article →</div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
