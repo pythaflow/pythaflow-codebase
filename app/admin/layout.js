@@ -5,7 +5,19 @@ import { Toaster } from 'react-hot-toast';
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
-  if (pathname === '/admin/login') return children;
+
+  const baseStyles = (
+    <style>{`
+      body, * {
+        cursor: auto !important;
+      }
+      a, button, select, input[type="submit"], input[type="button"], input[type="checkbox"] {
+        cursor: pointer !important;
+      }
+    `}</style>
+  );
+
+  if (pathname === '/admin/login') return <>{baseStyles}{children}</>;
 
   const links = [
     { href: '/admin', label: 'Dashboard' },
