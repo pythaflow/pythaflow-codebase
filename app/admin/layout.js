@@ -17,7 +17,7 @@ export default function AdminLayout({ children }) {
     `}</style>
   );
 
-  if (pathname === '/admin/login') return <>{baseStyles}{children}</>;
+  if (pathname === '/admin/login') return <>{children}</>;
 
   const links = [
     { href: '/admin', label: 'Dashboard' },
