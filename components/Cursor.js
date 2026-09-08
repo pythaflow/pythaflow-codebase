@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 
 export default function Cursor() {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin');
+  const isAdmin = pathname?.startsWith('/admin') && pathname !== '/admin/login';
   
   const dotRef = useRef(null);
   const ringRef = useRef(null);
