@@ -5,10 +5,10 @@ import * as cheerio from 'cheerio';
 export async function POST(req) {
   try {
     const data = await req.json();
-    const { website, instagram, facebook, linkedin, other, industry, budget, struggle } = data;
+    const { name, email, website, instagram, facebook, linkedin, other, industry, budget, struggle } = data;
 
-    if (!website && !industry && !instagram) {
-      return NextResponse.json({ error: 'Missing required context (website or industry)' }, { status: 400 });
+    if (!email || (!website && !industry && !instagram)) {
+      return NextResponse.json({ error: 'Missing required fields (email and at least one context link/industry)' }, { status: 400 });
     }
 
     // Define fallback data locally
@@ -30,7 +30,7 @@ export async function POST(req) {
     if (!process.env.OPENROUTER_API_KEY) {
       console.warn("OPENROUTER_API_KEY not set. Using fallback mock data.");
       await prisma.auditRequest.create({
-        data: { name: "Anonymous User", email: "Not provided", website: website || instagram || "N/A", report: JSON.stringify(mockResult) }
+        data: { name: name || "Anonymous User", email: email || "Not provided", website: website || instagram || "N/A", report: JSON.stringify(mockResult) }
       });
       return NextResponse.json(mockResult);
     }
@@ -52,8 +52,16 @@ export async function POST(req) {
           scrapedTitle = $('title').text().trim();
           scrapedDesc = $('meta[name="description"]').attr('content') || '';
           
-          $('script, style, noscript, iframe').remove();
-          scrapedText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 2500);
+          $('script, style, noscript, iframe, nav, footer, header').remove();
+          
+          // Extract text from important elements instead of dumping raw body
+          const texts = [];
+          $('h1, h2, h3, p, li').each((_, el) => {
+            const t = $(el).text().trim();
+            if (t.length > 20) texts.push(t);
+          });
+          
+          scrapedText = texts.join('\n').replace(/\s+/g, ' ').trim().substring(0, 3000);
         }
       } catch (err) {
         console.warn('Failed to scrape website:', err.message);
@@ -92,44 +100,48 @@ The JSON must have this exact structure (all scores MUST be integers between 1 a
     try {
       const freeModels = [
         "google/gemini-2.0-flash-lite-preview-02-05:free",
-        "meta-llama/llama-3.3-70b-instruct:free",
-        "qwen/qwen-2.5-72b-instruct:free"
+        "google/gemini-2.0-pro-exp-02-05:free",
+        "qwen/qwen-2.5-72b-instruct:free",
+        "meta-llama/llama-3.3-70b-instruct:free"
       ];
       
       let aiRes = null;
-      let usedModel = '';
+      let aiData = null;
 
-      // Cascade through free models to handle 429s and 404s
       for (const model of freeModels) {
-        aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://pythaflow.com',
-            'X-Title': 'Pythaflow'
-          },
-          body: JSON.stringify({
-            model: model, 
-            temperature: 0.7,
-            messages: [{ role: "user", content: prompt }]
-          })
-        });
+        try {
+          aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://pythaflow.com',
+              'X-Title': 'Pythaflow'
+            },
+            body: JSON.stringify({
+              model: model, 
+              temperature: 0.7,
+              response_format: { type: "json_object" },
+              messages: [{ role: "user", content: prompt }]
+            })
+          });
 
-        if (aiRes.ok) {
-          usedModel = model;
-          break; // success
+          if (aiRes.ok) {
+            aiData = await aiRes.json();
+            break;
+          }
+        } catch (e) {
+          console.warn(`Model ${model} failed:`, e.message);
         }
       }
 
-      if (!aiRes || !aiRes.ok) {
-        throw new Error(`OpenRouter API error: ${aiRes ? aiRes.status : 'Unknown'} ${aiRes ? aiRes.statusText : ''}`);
+      if (!aiData || !aiData.choices) {
+        throw new Error(`All OpenRouter models failed or returned invalid response.`);
       }
 
-      const aiData = await aiRes.json();
       let resultText = aiData.choices[0].message.content;
       
-      // Extract JSON using regex in case the model adds conversational text before or after
+      // Robust JSON extraction
       const jsonMatch = resultText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('Could not find JSON in AI response');
@@ -137,12 +149,11 @@ The JSON must have this exact structure (all scores MUST be integers between 1 a
       
       const parsed = JSON.parse(jsonMatch[0]);
 
-      // Validate structure to ensure 100% calculation accuracy
       if (parsed && parsed.scores && typeof parsed.scores === 'object') {
         const requiredKeys = ['website', 'seo', 'social', 'content', 'ads', 'strategy'];
         for (const key of requiredKeys) {
           if (!parsed.scores[key] || typeof parsed.scores[key] !== 'number') {
-            parsed.scores[key] = 3; // Fallback missing score to 3
+            parsed.scores[key] = 3;
           }
         }
         resultJson = parsed;
@@ -150,15 +161,15 @@ The JSON must have this exact structure (all scores MUST be integers between 1 a
         throw new Error('AI returned invalid JSON structure.');
       }
     } catch (aiErr) {
-      console.warn('AI generation failed, using fallback. Error:', aiErr.message);
-      // fallback already assigned
+      console.error('AI generation failed completely:', aiErr.message);
+      return NextResponse.json({ error: 'AI analysis failed due to high load. Please try again later.' }, { status: 503 });
     }
 
     // Save to database
     await prisma.auditRequest.create({
       data: {
-        name: "Anonymous User",
-        email: "Not provided",
+        name: name || "Anonymous User",
+        email: email || "Not provided",
         website: website || instagram || "N/A",
         report: JSON.stringify(resultJson),
       }

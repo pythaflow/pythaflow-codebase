@@ -74,7 +74,7 @@ export default function AssessmentPage() {
   const barsAnimated = useRef(false);
 
   const [form, setForm] = useState({
-    website: '', instagram: '', facebook: '',
+    name: '', email: '', website: '', instagram: '', facebook: '',
     linkedin: '', other: '', industry: '', budget: '', struggle: '',
   });
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -107,8 +107,8 @@ export default function AssessmentPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.website && !form.industry && !form.instagram) {
-      setError('Please fill in at least your website URL or industry.');
+    if (!form.email || (!form.website && !form.industry && !form.instagram)) {
+      setError('Please provide your email and at least your website URL or industry.');
       return;
     }
     setError('');
@@ -184,9 +184,17 @@ export default function AssessmentPage() {
               {/* Card 1: Links */}
               <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '1.8rem', marginBottom: '1rem', borderRadius: 2 }}>
                 <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--accent)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ display: 'block', width: 16, height: 1, background: 'var(--accent)' }} />Your Online Presence
+                  <span style={{ display: 'block', width: 16, height: 1, background: 'var(--accent)' }} />Your Details & Online Presence
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1.2rem' }} className="form-2col">
+                  <div style={{ marginBottom: '1.2rem' }}>
+                    <label className="field-label">Your Name *</label>
+                    <input className="field-input" type="text" placeholder="John Doe" value={form.name} onChange={set('name')} required />
+                  </div>
+                  <div style={{ marginBottom: '1.2rem' }}>
+                    <label className="field-label">Work Email *</label>
+                    <input className="field-input" type="email" placeholder="john@company.com" value={form.email} onChange={set('email')} required />
+                  </div>
                   <div style={{ marginBottom: '1.2rem', gridColumn: 'span 2' }}>
                     <label className="field-label">Website URL</label>
                     <input className="field-input" type="url" placeholder="https://yourwebsite.com" value={form.website} onChange={set('website')} />
